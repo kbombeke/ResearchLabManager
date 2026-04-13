@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --color-sidebar: #1e1e2e;
+  --color-sidebar-hover: #2a2a3c;
+  --color-sidebar-active: #33334a;
+  --color-blue: #4f6ef7;
+  --color-blue-light: #7b93fa;
+  --color-blue-dark: #3b57d9;
+  --color-text: #1a1a2e;
+  --color-text-secondary: #64648c;
+  --color-text-muted: #a0a0b8;
+  --color-bg: #f0f2f5;
+  --color-card: #ffffff;
+  --color-hover: #f5f6f8;
+  --color-border: #e4e6ef;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-purple: #8b5cf6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ── TipTap editor styles ── */
+.tiptap {
+  outline: none;
+  min-height: 200px;
+  padding: 2.5rem 3rem;
+}
+
+.tiptap p {
+  margin-bottom: 0.75rem;
+  line-height: 1.7;
+}
+
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.tiptap h1 { font-size: 1.5rem; }
+.tiptap h2 { font-size: 1.25rem; }
+.tiptap h3 { font-size: 1.1rem; }
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tiptap li {
+  margin-bottom: 0.25rem;
+  line-height: 1.7;
+}
+
+.tiptap blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 1rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.tiptap code {
+  background: var(--color-bg);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.tiptap pre {
+  background: var(--color-sidebar);
+  color: #e5e7eb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+}
+
+.tiptap pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  height: 0;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* ── Utility card class ── */
+.card {
+  background: var(--color-card);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+}
