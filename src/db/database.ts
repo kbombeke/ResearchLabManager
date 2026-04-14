@@ -1,13 +1,31 @@
-import Database from '@tauri-apps/plugin-sql';
+import Database from '@tauri-apps/plugin-sql'
+import { getCustomDbFolder, buildConnectionString } from '@/utils/dbPath'
 
-let db: Database | null = null;
+let db: Database | null = null
+let dbFallback = false
+
+export function isUsingFallback(): boolean {
+  return dbFallback
+}
 
 export async function getDb(): Promise<Database> {
   if (!db) {
-    db = await Database.load('sqlite:researchlabmanager.db');
-    await runMigrations(db);
+    const folder = await getCustomDbFolder()
+    const connectionString = buildConnectionString(folder)
+    try {
+      db = await Database.load(connectionString)
+    } catch (e) {
+      if (folder) {
+        console.error('Failed to load database from custom path, falling back to default:', e)
+        db = await Database.load('sqlite:researchlabmanager.db')
+        dbFallback = true
+      } else {
+        throw e
+      }
+    }
+    await runMigrations(db)
   }
-  return db;
+  return db
 }
 
 async function runMigrations(database: Database): Promise<void> {
@@ -23,7 +41,7 @@ async function runMigrations(database: Database): Promise<void> {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )
-  `);
+  `)
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS phd_trackers (
@@ -39,14 +57,31 @@ async function runMigrations(database: Database): Promise<void> {
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (team_member_id) REFERENCES team_members(id) ON DELETE CASCADE
     )
-  `);
+  `)
 
   // Add chapters column if it doesn't exist (migration for existing databases)
   try {
-    await database.execute(`ALTER TABLE phd_trackers ADD COLUMN chapters TEXT DEFAULT '[]'`);
+    await database.execute(`ALTER TABLE phd_trackers ADD COLUMN chapters TEXT DEFAULT '[]'`)
   } catch {
     // Column already exists
   }
+
+  // Add function_title column if it doesn't exist (migration for existing databases)
+  try {
+    await database.execute(`ALTER TABLE team_members ADD COLUMN function_title TEXT DEFAULT ''`)
+  } catch {
+    // Column already exists
+  }
+
+  await database.execute(`
+    CREATE TABLE IF NOT EXISTS team_member_relationships (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      member_id INTEGER NOT NULL UNIQUE,
+      parent_id INTEGER NOT NULL,
+      FOREIGN KEY (member_id) REFERENCES team_members(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_id) REFERENCES team_members(id) ON DELETE CASCADE
+    )
+  `)
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -60,7 +95,7 @@ async function runMigrations(database: Database): Promise<void> {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )
-  `);
+  `)
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS project_members (
@@ -71,7 +106,7 @@ async function runMigrations(database: Database): Promise<void> {
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (team_member_id) REFERENCES team_members(id) ON DELETE CASCADE
     )
-  `);
+  `)
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS deliverables (
@@ -87,7 +122,7 @@ async function runMigrations(database: Database): Promise<void> {
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (assigned_to) REFERENCES team_members(id) ON DELETE SET NULL
     )
-  `);
+  `)
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS meeting_notes (
@@ -100,7 +135,7 @@ async function runMigrations(database: Database): Promise<void> {
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
     )
-  `);
+  `)
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS meeting_attendees (
@@ -110,5 +145,5 @@ async function runMigrations(database: Database): Promise<void> {
       FOREIGN KEY (meeting_id) REFERENCES meeting_notes(id) ON DELETE CASCADE,
       FOREIGN KEY (team_member_id) REFERENCES team_members(id) ON DELETE CASCADE
     )
-  `);
+  `)
 }

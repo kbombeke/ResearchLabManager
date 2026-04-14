@@ -34,11 +34,5 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {
-    "sql": {
-      "preload": [
-        "sqlite:researchlabmanager.db"
-      ]
-    }
-  }
+  "plugins": {}
 }

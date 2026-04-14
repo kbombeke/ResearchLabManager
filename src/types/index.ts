@@ -2,6 +2,7 @@ export interface TeamMember {
   id: number;
   name: string;
   role: string;
+  function_title: string;
   email: string;
   photo: string;
   start_date: string;
@@ -84,6 +85,17 @@ export interface MeetingAttendee {
   id: number;
   meeting_id: number;
   team_member_id: number;
+}
+
+export interface TeamMemberRelationship {
+  id: number;
+  member_id: number;
+  parent_id: number;
+}
+
+export interface OrgTreeNode {
+  member: TeamMember;
+  children: OrgTreeNode[];
 }
 
 // Extended types with joins

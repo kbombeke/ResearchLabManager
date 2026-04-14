@@ -1,16 +1,61 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Download, Upload, Check, AlertTriangle } from 'lucide-vue-next'
-import { getDb } from '@/db/database'
+import { ref, onMounted } from 'vue'
+import { Download, Upload, Check, AlertTriangle, HardDrive, FolderOpen } from 'lucide-vue-next'
+import { invoke } from '@tauri-apps/api/core'
+import { appDataDir, join } from '@tauri-apps/api/path'
+import { open } from '@tauri-apps/plugin-dialog'
+import { getDb, isUsingFallback } from '@/db/database'
+import { getCustomDbFolder, setCustomDbFolder, DB_FILENAME } from '@/utils/dbPath'
 
 const exportStatus = ref<'idle' | 'success' | 'error'>('idle')
 const importStatus = ref<'idle' | 'success' | 'error'>('idle')
 const importError = ref('')
+const customFolder = ref<string | null>(null)
+const currentDbPath = ref('')
+const changingLocation = ref(false)
+const fallbackActive = ref(false)
+
+onMounted(async () => {
+  customFolder.value = await getCustomDbFolder()
+  fallbackActive.value = isUsingFallback()
+  if (customFolder.value && !fallbackActive.value) {
+    currentDbPath.value = await join(customFolder.value, DB_FILENAME)
+  } else {
+    const appData = await appDataDir()
+    currentDbPath.value = await join(appData, DB_FILENAME)
+  }
+})
+
+async function handleChangeLocation() {
+  const selected = await open({ directory: true, multiple: false, title: 'Select database folder' })
+  if (typeof selected !== 'string') return
+
+  changingLocation.value = true
+  try {
+    const newDbPath = await join(selected, DB_FILENAME)
+    const exists = await invoke<boolean>('file_exists', { path: newDbPath })
+
+    if (!exists) {
+      await invoke('copy_file', { source: currentDbPath.value, destination: newDbPath })
+    }
+
+    await setCustomDbFolder(selected)
+    window.location.reload()
+  } catch (err) {
+    changingLocation.value = false
+    console.error('Failed to change database location:', err)
+  }
+}
+
+async function handleResetLocation() {
+  await setCustomDbFolder(null)
+  window.location.reload()
+}
 
 async function handleExport() {
   try {
     const db = await getDb()
-    const tables = ['team_members', 'phd_trackers', 'projects', 'project_members', 'deliverables', 'meeting_notes', 'meeting_attendees']
+    const tables = ['team_members', 'team_member_relationships', 'phd_trackers', 'projects', 'project_members', 'deliverables', 'meeting_notes', 'meeting_attendees']
     const data: Record<string, unknown[]> = {}
     for (const table of tables) {
       data[table] = await db.select(`SELECT * FROM ${table}`)
@@ -42,9 +87,9 @@ function handleImport() {
       const text = await file.text()
       const data = JSON.parse(text)
       const db = await getDb()
-      const deleteTables = ['meeting_attendees', 'meeting_notes', 'deliverables', 'project_members', 'projects', 'phd_trackers', 'team_members']
+      const deleteTables = ['meeting_attendees', 'meeting_notes', 'deliverables', 'project_members', 'projects', 'phd_trackers', 'team_member_relationships', 'team_members']
       for (const table of deleteTables) { await db.execute(`DELETE FROM ${table}`) }
-      const insertOrder = ['team_members', 'phd_trackers', 'projects', 'project_members', 'deliverables', 'meeting_notes', 'meeting_attendees']
+      const insertOrder = ['team_members', 'team_member_relationships', 'phd_trackers', 'projects', 'project_members', 'deliverables', 'meeting_notes', 'meeting_attendees']
       for (const table of insertOrder) {
         const rows = data[table]
         if (!Array.isArray(rows)) continue
@@ -77,6 +122,38 @@ function handleImport() {
     </div>
 
     <div class="max-w-2xl space-y-10">
+      <!-- Database Location -->
+      <div class="bg-card rounded-2xl p-10 shadow-sm">
+        <div class="flex items-start gap-6">
+          <div class="w-12 h-12 rounded-xl bg-purple/10 flex items-center justify-center shrink-0">
+            <HardDrive :size="22" class="text-purple" />
+          </div>
+          <div class="flex-1">
+            <h2 class="text-lg font-semibold text-text">Database Location</h2>
+            <p class="text-sm text-text-secondary mt-2 mb-4 leading-relaxed">
+              Choose where your database is stored. Use a cloud-synced folder (like OneDrive) to access your data across computers.
+            </p>
+            <div v-if="fallbackActive" class="flex items-center gap-2 text-xs text-warning mb-4">
+              <AlertTriangle :size="14" />
+              <span>Could not access custom location. Using default path instead.</span>
+            </div>
+            <div class="bg-hover/60 rounded-xl px-5 py-3.5 mb-5">
+              <p class="text-[11px] text-text-muted mb-1 uppercase tracking-wide">Current location</p>
+              <p class="text-sm text-text font-mono truncate">{{ currentDbPath || 'Loading...' }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <button @click="handleChangeLocation" :disabled="changingLocation" class="flex items-center gap-2 px-5 py-2.5 bg-blue text-white text-sm font-medium rounded-xl hover:bg-blue-dark transition-colors disabled:opacity-50">
+                <FolderOpen :size="16" />
+                {{ changingLocation ? 'Moving...' : 'Change Location' }}
+              </button>
+              <button v-if="customFolder" @click="handleResetLocation" class="flex items-center gap-2 px-5 py-2.5 border border-border text-sm text-text-secondary rounded-xl hover:bg-hover transition-colors">
+                Reset to Default
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Export -->
       <div class="bg-card rounded-2xl p-10 shadow-sm">
         <div class="flex items-start gap-6">
