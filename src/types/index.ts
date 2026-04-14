@@ -24,19 +24,10 @@ export interface PhdTracker {
   updated_at: string;
 }
 
-export interface Milestone {
-  id: string;
-  title: string;
-  target_date: string;
-  completed: boolean;
-  description: string;
-}
-
 export interface DissertationChapter {
   id: string;
   title: string;
   reference: string;
-  notes: string;
   status: 'finished' | 'in_progress' | 'not_started';
 }
 
@@ -44,6 +35,7 @@ export interface Project {
   id: number;
   name: string;
   description: string;
+  funding: string;
   status: 'active' | 'completed' | 'on_hold' | 'planned';
   start_date: string;
   end_date: string;

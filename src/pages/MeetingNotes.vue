@@ -96,7 +96,7 @@ watchEffect(() => {
   <div v-else class="flex gap-6 -ml-20 -mr-16 -my-12 h-screen">
     <!-- Notes List Sidebar -->
     <div class="w-80 bg-card border-r border-border flex flex-col shrink-0">
-      <div class="px-8 py-8 border-b border-border">
+      <div class="px-6 py-6 border-b border-border">
         <div class="flex items-center justify-between mb-4">
           <h1 class="text-base font-bold text-text">Meeting Notes</h1>
           <button @click="showNewModal = true" class="p-2 bg-blue text-white rounded-lg hover:bg-blue-dark transition-colors"><Plus :size="16" /></button>
@@ -111,14 +111,14 @@ watchEffect(() => {
           v-for="note in filteredNotes"
           :key="note.id"
           @click="selectNote(note)"
-          :class="['w-full text-left px-8 py-7 border-b border-border transition-colors', selectedNote?.id === note.id ? 'bg-blue/5 border-l-2 border-l-blue' : 'hover:bg-hover/50']"
+          :class="['w-full text-left px-6 py-5 border-b border-border transition-colors', selectedNote?.id === note.id ? 'bg-blue/5 border-l-2 border-l-blue' : 'hover:bg-hover/50']"
         >
           <p class="text-sm font-medium text-text truncate">{{ note.title }}</p>
           <div class="flex items-center gap-2 mt-1.5">
             <Calendar :size="12" class="text-text-muted" />
             <span class="text-xs text-text-muted">{{ format(new Date(note.date), 'MMM d, yyyy') }}</span>
           </div>
-          <span v-if="note.project_name" class="inline-block mt-2.5 text-xs text-blue bg-blue/10 rounded-md px-2.5 py-1">{{ note.project_name }}</span>
+          <span v-if="note.project_name" class="inline-block mt-2.5 text-xs text-blue bg-blue/10 rounded-md px-3 py-1">{{ note.project_name }}</span>
           <div v-if="note.attendees.length > 0" class="flex items-center gap-1 mt-2.5">
             <div v-for="a in note.attendees.slice(0, 4)" :key="a.team_member_id" class="w-5 h-5 rounded-full bg-hover flex items-center justify-center text-[8px] font-medium text-text-secondary" :title="a.name">
               {{ a.name.split(' ').map((n: string) => n[0]).join('') }}
@@ -126,7 +126,7 @@ watchEffect(() => {
             <span v-if="note.attendees.length > 4" class="text-[10px] text-text-muted">+{{ note.attendees.length - 4 }}</span>
           </div>
         </button>
-        <div v-if="filteredNotes.length === 0" class="p-8 text-center text-text-muted">
+        <div v-if="filteredNotes.length === 0" class="p-6 text-center text-text-muted">
           <FileText :size="32" class="mx-auto mb-2" />
           <p class="text-sm">{{ searchQuery ? 'No matching notes' : 'No meeting notes yet' }}</p>
         </div>
@@ -136,19 +136,19 @@ watchEffect(() => {
     <!-- Editor Panel -->
     <div class="flex-1 flex flex-col min-w-0">
       <template v-if="selectedNote">
-        <div class="flex items-center justify-between px-10 py-7 border-b border-border bg-card">
+        <div class="flex items-center justify-between px-8 py-6 border-b border-border bg-card">
           <div>
             <h2 class="text-base font-semibold text-text">{{ selectedNote.title }}</h2>
             <div class="flex items-center gap-3 mt-1">
               <span class="text-xs text-text-secondary">{{ format(new Date(selectedNote.date), 'EEEE, MMMM d, yyyy') }}</span>
-              <span v-if="selectedNote.project_name" class="text-xs text-blue bg-blue/10 rounded-md px-2.5 py-1">{{ selectedNote.project_name }}</span>
+              <span v-if="selectedNote.project_name" class="text-xs text-blue bg-blue/10 rounded-md px-3 py-1">{{ selectedNote.project_name }}</span>
             </div>
           </div>
           <button @click="deleteConfirm = selectedNote.id" class="p-2 rounded-lg hover:bg-danger/10 text-text-muted hover:text-danger transition-colors"><Trash2 :size="16" /></button>
         </div>
 
         <!-- Attendees bar -->
-        <div class="px-10 py-5 border-b border-border bg-hover/40 flex items-center gap-4">
+        <div class="px-8 py-4 border-b border-border bg-hover/40 flex items-center gap-4">
           <UsersIcon :size="14" class="text-text-muted shrink-0" />
           <div class="flex items-center gap-1.5 flex-wrap">
             <button
@@ -173,7 +173,7 @@ watchEffect(() => {
         </div>
 
         <!-- TipTap Editor Toolbar -->
-        <div v-if="editor" class="px-10 py-3.5 border-b border-border bg-card flex items-center gap-1.5">
+        <div v-if="editor" class="px-8 py-3 border-b border-border bg-card flex items-center gap-1.5">
           <button @click="editor.chain().focus().toggleBold().run()" :class="['px-2.5 py-1 rounded text-sm', editor.isActive('bold') ? 'bg-hover font-bold' : 'hover:bg-hover']">B</button>
           <button @click="editor.chain().focus().toggleItalic().run()" :class="['px-2.5 py-1 rounded text-sm italic', editor.isActive('italic') ? 'bg-hover' : 'hover:bg-hover']">I</button>
           <button @click="editor.chain().focus().toggleStrike().run()" :class="['px-2.5 py-1 rounded text-sm line-through', editor.isActive('strike') ? 'bg-hover' : 'hover:bg-hover']">S</button>

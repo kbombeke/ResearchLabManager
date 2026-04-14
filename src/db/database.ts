@@ -88,6 +88,7 @@ async function runMigrations(database: Database): Promise<void> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       description TEXT DEFAULT '',
+      funding TEXT DEFAULT '',
       status TEXT DEFAULT 'active',
       start_date TEXT DEFAULT '',
       end_date TEXT DEFAULT '',
@@ -96,6 +97,13 @@ async function runMigrations(database: Database): Promise<void> {
       updated_at TEXT DEFAULT (datetime('now'))
     )
   `)
+
+  // Add funding column if it doesn't exist (migration for existing databases)
+  try {
+    await database.execute(`ALTER TABLE projects ADD COLUMN funding TEXT DEFAULT ''`)
+  } catch {
+    // Column already exists
+  }
 
   await database.execute(`
     CREATE TABLE IF NOT EXISTS project_members (

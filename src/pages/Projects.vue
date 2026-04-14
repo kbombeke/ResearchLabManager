@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Edit2, Trash2, FolderKanban, Users, Calendar, ChevronDown, ChevronUp, Package } from 'lucide-vue-next'
+import { Plus, Edit2, Trash2, FolderKanban, Users, Calendar, ChevronDown, ChevronUp, Package, Banknote } from 'lucide-vue-next'
 import { format } from 'date-fns'
 import { useProjectStore } from '@/stores/projectStore'
 import { useTeamStore } from '@/stores/teamStore'
@@ -13,7 +13,7 @@ const projectStore = useProjectStore()
 const teamStore = useTeamStore()
 
 const projectColors = ['#4a90d9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
-const emptyProjectForm = { name: '', description: '', status: 'active' as Project['status'], start_date: '', end_date: '', color: '#4a90d9' }
+const emptyProjectForm = { name: '', description: '', funding: '', status: 'active' as Project['status'], start_date: '', end_date: '', color: '#4a90d9' }
 const emptyDeliverableForm = { title: '', description: '', due_date: '', status: 'pending' as Deliverable['status'], assigned_to: null as number | null }
 
 const showProjectModal = ref(false)
@@ -53,7 +53,7 @@ async function handleProjectSubmit() {
 
 function handleEditProject(project: Project) {
   editingProjectId.value = project.id
-  projectForm.value = { name: project.name, description: project.description, status: project.status, start_date: project.start_date, end_date: project.end_date, color: project.color }
+  projectForm.value = { name: project.name, description: project.description, funding: project.funding, status: project.status, start_date: project.start_date, end_date: project.end_date, color: project.color }
   showProjectModal.value = true
 }
 
@@ -106,7 +106,7 @@ const activeMembers = computed(() => teamStore.members.filter(m => m.is_active))
 
     <div class="space-y-8">
       <div v-for="project in projectStore.projects" :key="project.id" class="bg-card rounded-2xl overflow-hidden shadow-sm">
-        <div class="flex items-center justify-between px-10 py-9 cursor-pointer hover:bg-hover/50 transition-colors" @click="toggleExpand(project.id)">
+        <div class="flex items-center justify-between px-8 py-6 cursor-pointer hover:bg-hover/50 transition-colors" @click="toggleExpand(project.id)">
           <div class="flex items-center gap-5">
             <div class="w-3 h-10 rounded-full shrink-0" :style="{ backgroundColor: project.color }" />
             <div>
@@ -116,6 +116,10 @@ const activeMembers = computed(() => teamStore.members.filter(m => m.is_active))
           </div>
           <div class="flex items-center gap-3">
             <StatusBadge :status="project.status" />
+            <span v-if="project.funding" class="text-xs text-text-muted flex items-center gap-1">
+              <Banknote :size="12" />
+              {{ project.funding }}
+            </span>
             <span v-if="project.start_date" class="text-xs text-text-muted flex items-center gap-1">
               <Calendar :size="12" />
               {{ format(new Date(project.start_date), 'MMM yyyy') }}{{ project.end_date ? ` - ${format(new Date(project.end_date), 'MMM yyyy')}` : '' }}
@@ -129,8 +133,8 @@ const activeMembers = computed(() => teamStore.members.filter(m => m.is_active))
           </div>
         </div>
 
-        <div v-if="expandedId === project.id" class="px-10 pb-10 border-t border-border">
-          <div class="grid grid-cols-2 gap-10 mt-8">
+        <div v-if="expandedId === project.id" class="px-8 pb-8 border-t border-border">
+          <div class="grid grid-cols-2 gap-8 mt-6">
             <!-- Team Members -->
             <div>
               <div class="flex items-center justify-between mb-5">
@@ -139,7 +143,7 @@ const activeMembers = computed(() => teamStore.members.filter(m => m.is_active))
               </div>
               <p v-if="projectDetails[project.id]?.members.length === 0" class="text-sm text-text-muted">No members assigned yet.</p>
               <div class="space-y-2.5">
-                <div v-for="pm in projectDetails[project.id]?.members" :key="pm.id" class="flex items-center justify-between group bg-hover/50 rounded-xl px-8 py-5">
+                <div v-for="pm in projectDetails[project.id]?.members" :key="pm.id" class="flex items-center justify-between group bg-hover/50 rounded-xl px-6 py-4">
                   <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-hover flex items-center justify-center text-xs font-medium text-text-secondary">{{ pm.member_name.split(' ').map((n: string) => n[0]).join('') }}</div>
                     <span class="text-sm text-text">{{ pm.member_name }}</span>
@@ -156,7 +160,7 @@ const activeMembers = computed(() => teamStore.members.filter(m => m.is_active))
               </div>
               <p v-if="projectDetails[project.id]?.deliverables.length === 0" class="text-sm text-text-muted">No deliverables yet.</p>
               <div class="space-y-2.5">
-                <div v-for="d in projectDetails[project.id]?.deliverables" :key="d.id" class="flex items-center justify-between group bg-hover/50 rounded-xl px-8 py-5">
+                <div v-for="d in projectDetails[project.id]?.deliverables" :key="d.id" class="flex items-center justify-between group bg-hover/50 rounded-xl px-6 py-4">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
                       <span class="text-sm text-text truncate">{{ d.title }}</span>
@@ -192,6 +196,10 @@ const activeMembers = computed(() => teamStore.members.filter(m => m.is_active))
         <div>
           <label class="block text-sm font-medium text-text mb-2">Description</label>
           <textarea v-model="projectForm.description" class="w-full border border-border rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg resize-none" rows="3" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-text mb-2">Funding</label>
+          <input type="text" v-model="projectForm.funding" class="w-full border border-border rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg" placeholder="e.g., ERC Starting Grant, FWO, Internal" />
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>

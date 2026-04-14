@@ -4,7 +4,7 @@ import { Plus, Edit2, Trash2, GraduationCap, ChevronDown, ChevronUp, BookOpen } 
 import { format, differenceInMonths } from 'date-fns'
 import { useTeamStore } from '@/stores/teamStore'
 import { usePhdStore } from '@/stores/phdStore'
-import type { PhdTrackerWithMember, Milestone, DissertationChapter } from '@/types'
+import type { PhdTrackerWithMember, DissertationChapter } from '@/types'
 import Modal from '@/components/Modal.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 
@@ -17,17 +17,12 @@ const showModal = ref(false)
 const editingId = ref<number | null>(null)
 const form = ref({ ...emptyForm })
 const expandedId = ref<number | null>(null)
-const milestoneForm = ref({ title: '', target_date: '', description: '' })
-const chapterForm = ref({ title: '', reference: '', notes: '', status: 'not_started' as DissertationChapter['status'] })
+const chapterForm = ref({ title: '', reference: '', status: 'not_started' as DissertationChapter['status'] })
 const editingChapterId = ref<string | null>(null)
 const deleteConfirm = ref<number | null>(null)
 const today = new Date()
 
 onMounted(() => { teamStore.loadMembers(); phdStore.loadTrackers() })
-
-function getMilestones(tracker: PhdTrackerWithMember): Milestone[] {
-  try { return JSON.parse(tracker.milestones) } catch { return [] }
-}
 
 async function handleSubmit() {
   if (!form.value.team_member_id || !form.value.phd_start_date || !form.value.expected_end_date) return
@@ -51,26 +46,6 @@ function closeModal() {
   form.value = { ...emptyForm }
 }
 
-async function addMilestone(tracker: PhdTrackerWithMember) {
-  if (!milestoneForm.value.title) return
-  const milestones = getMilestones(tracker)
-  milestones.push({ id: crypto.randomUUID(), title: milestoneForm.value.title, target_date: milestoneForm.value.target_date, completed: false, description: milestoneForm.value.description })
-  await phdStore.updateTracker(tracker.id, { milestones: JSON.stringify(milestones) })
-  milestoneForm.value = { title: '', target_date: '', description: '' }
-}
-
-async function toggleMilestone(tracker: PhdTrackerWithMember, milestoneId: string) {
-  const milestones = getMilestones(tracker)
-  const ms = milestones.find(m => m.id === milestoneId)
-  if (ms) ms.completed = !ms.completed
-  await phdStore.updateTracker(tracker.id, { milestones: JSON.stringify(milestones) })
-}
-
-async function deleteMilestone(tracker: PhdTrackerWithMember, milestoneId: string) {
-  const milestones = getMilestones(tracker).filter(m => m.id !== milestoneId)
-  await phdStore.updateTracker(tracker.id, { milestones: JSON.stringify(milestones) })
-}
-
 function getChapters(tracker: PhdTrackerWithMember): DissertationChapter[] {
   try { return JSON.parse(tracker.chapters || '[]') } catch { return [] }
 }
@@ -78,9 +53,9 @@ function getChapters(tracker: PhdTrackerWithMember): DissertationChapter[] {
 async function addChapter(tracker: PhdTrackerWithMember) {
   if (!chapterForm.value.title) return
   const chapters = getChapters(tracker)
-  chapters.push({ id: crypto.randomUUID(), title: chapterForm.value.title, reference: chapterForm.value.reference, notes: chapterForm.value.notes, status: chapterForm.value.status })
+  chapters.push({ id: crypto.randomUUID(), title: chapterForm.value.title, reference: chapterForm.value.reference, status: chapterForm.value.status })
   await phdStore.updateTracker(tracker.id, { chapters: JSON.stringify(chapters) })
-  chapterForm.value = { title: '', reference: '', notes: '', status: 'not_started' }
+  chapterForm.value = { title: '', reference: '', status: 'not_started' }
 }
 
 async function updateChapter(tracker: PhdTrackerWithMember, chapterId: string, updates: Partial<DissertationChapter>) {
@@ -97,19 +72,19 @@ async function deleteChapter(tracker: PhdTrackerWithMember, chapterId: string) {
 
 function startEditChapter(ch: DissertationChapter) {
   editingChapterId.value = ch.id
-  chapterForm.value = { title: ch.title, reference: ch.reference, notes: ch.notes, status: ch.status }
+  chapterForm.value = { title: ch.title, reference: ch.reference, status: ch.status }
 }
 
 async function saveEditChapter(tracker: PhdTrackerWithMember) {
   if (!editingChapterId.value || !chapterForm.value.title) return
-  await updateChapter(tracker, editingChapterId.value, { title: chapterForm.value.title, reference: chapterForm.value.reference, notes: chapterForm.value.notes, status: chapterForm.value.status })
+  await updateChapter(tracker, editingChapterId.value, { title: chapterForm.value.title, reference: chapterForm.value.reference, status: chapterForm.value.status })
   editingChapterId.value = null
-  chapterForm.value = { title: '', reference: '', notes: '', status: 'not_started' }
+  chapterForm.value = { title: '', reference: '', status: 'not_started' }
 }
 
 function cancelEditChapter() {
   editingChapterId.value = null
-  chapterForm.value = { title: '', reference: '', notes: '', status: 'not_started' }
+  chapterForm.value = { title: '', reference: '', status: 'not_started' }
 }
 
 const chapterStatusStyles: Record<string, string> = {
@@ -159,13 +134,6 @@ function trackerProgress(tracker: PhdTrackerWithMember) {
   return Math.min(Math.max(((today.getTime() - start) / (end - start)) * 100, 0), 100)
 }
 
-function milestonePos(tracker: PhdTrackerWithMember, ms: Milestone) {
-  const start = new Date(tracker.phd_start_date).getTime()
-  const end = new Date(tracker.expected_end_date).getTime()
-  const msDate = new Date(ms.target_date).getTime()
-  return ((msDate - start) / (end - start)) * 100
-}
-
 function yearPos(year: number) {
   if (!timelineData.value) return 0
   const { minDate, range } = timelineData.value
@@ -184,7 +152,7 @@ function barColor(status: string) {
     <div class="flex items-center justify-between mb-8">
       <div>
         <h1 class="text-2xl font-bold text-text">PhD Progress</h1>
-        <p class="text-text-secondary mt-2">Track PhD student timelines and milestones</p>
+        <p class="text-text-secondary mt-2">Track PhD student timelines and dissertation progress</p>
       </div>
       <button @click="form = { ...emptyForm }; editingId = null; showModal = true" class="flex items-center gap-2 px-5 py-2.5 bg-blue text-white text-sm font-medium rounded-xl hover:bg-blue-dark transition-colors">
         <Plus :size="16" /> Add PhD Tracker
@@ -192,11 +160,14 @@ function barColor(status: string) {
     </div>
 
     <!-- Timeline View -->
-    <div v-if="timelineData && phdStore.trackers.length > 0" class="bg-card rounded-2xl p-10 mb-10 shadow-sm">
-      <h2 class="text-lg font-semibold text-text mb-10">Timeline Overview</h2>
+    <div v-if="timelineData && phdStore.trackers.length > 0" class="bg-card rounded-2xl p-8 mb-8 shadow-sm">
+      <h2 class="text-lg font-semibold text-text mb-8">Timeline Overview</h2>
       <div class="relative">
-        <div class="flex mb-3 ml-52 relative h-5">
-          <div v-for="year in timelineData.years" :key="year" class="absolute text-xs text-text-muted" :style="{ left: `${yearPos(year)}%` }">{{ year }}</div>
+        <div class="flex items-center gap-5 mb-3">
+          <div class="w-48 shrink-0"></div>
+          <div class="flex-1 relative h-5">
+            <div v-for="year in timelineData.years" :key="year" class="absolute text-xs text-text-muted" :style="{ left: `${yearPos(year)}%` }">{{ year }}</div>
+          </div>
         </div>
         <div class="space-y-4">
           <div v-for="tracker in phdStore.trackers" :key="tracker.id" class="flex items-center gap-5">
@@ -207,14 +178,6 @@ function barColor(status: string) {
             <div class="flex-1 relative h-9">
               <div class="absolute h-8 rounded-lg bg-hover border border-border top-0.5" :style="trackerBarStyle(tracker)">
                 <div :class="['h-full rounded-lg opacity-30', barColor(tracker.status)]" :style="{ width: `${trackerProgress(tracker)}%` }" />
-                <template v-for="ms in getMilestones(tracker)" :key="ms.id">
-                  <div
-                    v-if="ms.target_date && milestonePos(tracker, ms) >= 0 && milestonePos(tracker, ms) <= 100"
-                    :class="['absolute top-1/2 w-3 h-3 rounded-full border-2 border-white', ms.completed ? 'bg-success' : 'bg-text-muted']"
-                    :style="{ left: `${milestonePos(tracker, ms)}%`, transform: 'translate(-50%, -50%)' }"
-                    :title="`${ms.title}${ms.target_date ? ` - ${format(new Date(ms.target_date), 'MMM yyyy')}` : ''}`"
-                  />
-                </template>
               </div>
             </div>
           </div>
@@ -222,7 +185,7 @@ function barColor(status: string) {
         <div
           v-if="timelineData.todayPos >= 0 && timelineData.todayPos <= 100"
           class="absolute top-0 bottom-0 w-px bg-danger z-10"
-          :style="{ left: `calc(12rem + 1.25rem + ${timelineData.todayPos}% * (100% - 12rem - 1.25rem) / 100%)` }"
+          :style="{ left: `calc(13.25rem + (100% - 13.25rem) * ${timelineData.todayPos / 100})` }"
         >
           <div class="absolute -top-5 -translate-x-1/2 text-[10px] text-danger font-medium bg-card px-1.5 rounded">Today</div>
         </div>
@@ -232,7 +195,7 @@ function barColor(status: string) {
     <!-- Detail Cards -->
     <div class="space-y-8">
       <div v-for="tracker in phdStore.trackers" :key="tracker.id" class="bg-card rounded-2xl overflow-hidden shadow-sm">
-        <div class="flex items-center justify-between px-10 py-9 cursor-pointer hover:bg-hover/50 transition-colors" @click="expandedId = expandedId === tracker.id ? null : tracker.id">
+        <div class="flex items-center justify-between px-8 py-6 cursor-pointer hover:bg-hover/50 transition-colors" @click="expandedId = expandedId === tracker.id ? null : tracker.id">
           <div class="flex items-center gap-5">
             <div class="w-11 h-11 rounded-full bg-hover flex items-center justify-center text-sm font-medium text-text-secondary">
               {{ tracker.member_name.split(' ').map((n: string) => n[0]).join('') }}
@@ -247,7 +210,6 @@ function barColor(status: string) {
           </div>
           <div class="flex items-center gap-4">
             <StatusBadge :status="tracker.status" />
-            <span class="text-sm text-text-muted">{{ getMilestones(tracker).filter(m => m.completed).length }}/{{ getMilestones(tracker).length }} milestones</span>
             <div class="flex items-center gap-1">
               <button @click.stop="handleEdit(tracker)" class="p-2 rounded-lg hover:bg-hover text-text-muted transition-colors"><Edit2 :size="14" /></button>
               <button @click.stop="deleteConfirm = tracker.id" class="p-2 rounded-lg hover:bg-danger/10 text-text-muted hover:text-danger transition-colors"><Trash2 :size="14" /></button>
@@ -257,32 +219,14 @@ function barColor(status: string) {
           </div>
         </div>
 
-        <div v-if="expandedId === tracker.id" class="px-10 pb-10 border-t border-border">
-          <div v-if="tracker.notes" class="mt-8 mb-8 text-sm text-text-secondary bg-hover/60 rounded-xl p-8 leading-relaxed">{{ tracker.notes }}</div>
-          <div class="mt-7">
-            <h4 class="text-sm font-semibold text-text mb-5">Milestones</h4>
-            <div class="space-y-3">
-              <div v-for="ms in getMilestones(tracker)" :key="ms.id" class="flex items-center gap-4 group bg-hover/50 rounded-xl px-8 py-5">
-                <input type="checkbox" :checked="ms.completed" @change="toggleMilestone(tracker, ms.id)" class="rounded border-border" />
-                <div class="flex-1">
-                  <span :class="['text-sm', ms.completed ? 'line-through text-text-muted' : 'text-text']">{{ ms.title }}</span>
-                  <span v-if="ms.target_date" class="text-xs text-text-muted ml-2">{{ format(new Date(ms.target_date), 'MMM yyyy') }}</span>
-                </div>
-                <button @click="deleteMilestone(tracker, ms.id)" class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-danger/10 text-text-muted hover:text-danger transition-all"><Trash2 :size="12" /></button>
-              </div>
-            </div>
-            <div class="mt-6 pt-5 border-t border-border flex items-center gap-3">
-              <input type="text" v-model="milestoneForm.title" placeholder="New milestone..." class="flex-1 border border-border rounded-xl px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg" @keydown.enter.prevent="addMilestone(tracker)" />
-              <input type="date" v-model="milestoneForm.target_date" class="border border-border rounded-xl px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg" />
-              <button @click="addMilestone(tracker)" class="px-4 py-2.5 bg-blue text-white text-sm rounded-xl hover:bg-blue-dark transition-colors">Add</button>
-            </div>
-          </div>
+        <div v-if="expandedId === tracker.id" class="px-8 pb-8 border-t border-border">
+          <div v-if="tracker.notes" class="mt-6 mb-6 text-sm text-text-secondary bg-hover/60 rounded-xl p-6 leading-relaxed">{{ tracker.notes }}</div>
 
           <!-- Dissertation Chapters -->
-          <div class="mt-10 pt-8 border-t border-border">
+          <div class="mt-7">
             <h4 class="text-sm font-semibold text-text mb-5 flex items-center gap-2"><BookOpen :size="14" /> Dissertation Chapters</h4>
             <div class="space-y-3">
-              <div v-for="(ch, idx) in getChapters(tracker)" :key="ch.id" class="group bg-hover/50 rounded-xl px-8 py-5">
+              <div v-for="(ch, idx) in getChapters(tracker)" :key="ch.id" class="group bg-hover/50 rounded-xl px-6 py-4">
                 <template v-if="editingChapterId === ch.id">
                   <div class="space-y-3">
                     <div class="flex items-center gap-3">
@@ -297,12 +241,9 @@ function barColor(status: string) {
                     <div class="ml-9">
                       <input type="text" v-model="chapterForm.reference" placeholder="APA reference (e.g., Author, A. (2024). Title. Journal, 1(2), 1-10.)" class="w-full border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg" />
                     </div>
-                    <div class="ml-9">
-                      <textarea v-model="chapterForm.notes" placeholder="Notes..." class="w-full border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg resize-none" rows="2" />
-                    </div>
                     <div class="ml-9 flex items-center gap-2">
-                      <button @click="saveEditChapter(tracker)" class="px-3 py-1.5 bg-blue text-white text-xs rounded-lg hover:bg-blue-dark transition-colors">Save</button>
-                      <button @click="cancelEditChapter" class="px-3 py-1.5 text-xs text-text-secondary border border-border rounded-lg hover:bg-hover transition-colors">Cancel</button>
+                      <button @click="saveEditChapter(tracker)" class="px-4 py-2 bg-blue text-white text-xs rounded-lg hover:bg-blue-dark transition-colors">Save</button>
+                      <button @click="cancelEditChapter" class="px-4 py-2 text-xs text-text-secondary border border-border rounded-lg hover:bg-hover transition-colors">Cancel</button>
                     </div>
                   </div>
                 </template>
@@ -312,10 +253,9 @@ function barColor(status: string) {
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2 mb-1">
                         <span class="text-sm font-medium text-text">{{ ch.title }}</span>
-                        <span :class="['text-[10px] px-2 py-0.5 rounded-md font-medium', chapterStatusStyles[ch.status]]">{{ chapterStatusLabels[ch.status] }}</span>
+                        <span :class="['text-[10px] px-2.5 py-1 rounded-md font-medium', chapterStatusStyles[ch.status]]">{{ chapterStatusLabels[ch.status] }}</span>
                       </div>
                       <p v-if="ch.reference" class="text-xs text-text-secondary italic leading-relaxed">{{ ch.reference }}</p>
-                      <p v-if="ch.notes" class="text-xs text-text-muted mt-1.5 leading-relaxed">{{ ch.notes }}</p>
                     </div>
                     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       <button @click="startEditChapter(ch)" class="p-1.5 rounded-lg hover:bg-hover text-text-muted transition-colors"><Edit2 :size="12" /></button>
@@ -335,7 +275,6 @@ function barColor(status: string) {
                 </select>
               </div>
               <input type="text" v-model="chapterForm.reference" placeholder="APA reference..." class="w-full border border-border rounded-xl px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg" />
-              <textarea v-model="chapterForm.notes" placeholder="Notes..." class="w-full border border-border rounded-xl px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue/30 bg-bg resize-none" rows="2" />
               <button @click="addChapter(tracker)" class="px-4 py-2.5 bg-blue text-white text-sm rounded-xl hover:bg-blue-dark transition-colors">Add Chapter</button>
             </div>
           </div>
@@ -391,7 +330,7 @@ function barColor(status: string) {
 
     <!-- Delete Confirmation -->
     <Modal :open="deleteConfirm !== null" @close="deleteConfirm = null" title="Delete PhD Tracker">
-      <p class="text-sm text-text-secondary mb-6">Are you sure you want to delete this PhD tracker? All milestones will be lost.</p>
+      <p class="text-sm text-text-secondary mb-6">Are you sure you want to delete this PhD tracker? All chapter data will be lost.</p>
       <div class="flex justify-end gap-3">
         <button @click="deleteConfirm = null" class="px-5 py-2.5 text-sm text-text-secondary border border-border rounded-xl hover:bg-hover transition-colors">Cancel</button>
         <button @click="deleteConfirm && phdStore.deleteTracker(deleteConfirm).then(() => deleteConfirm = null)" class="px-5 py-2.5 bg-danger text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors">Delete</button>

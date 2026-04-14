@@ -132,11 +132,11 @@ function closeModal() {
 
     <!-- Members Grid -->
     <template v-if="currentTab === 'members'">
-      <div class="grid grid-cols-3 gap-10">
+      <div class="grid grid-cols-3 gap-6">
         <div
           v-for="member in filteredMembers"
           :key="member.id"
-          :class="['bg-card rounded-2xl p-10 shadow-sm transition-all hover:shadow-md', !member.is_active ? 'opacity-60' : '']"
+          :class="['bg-card rounded-2xl p-8 shadow-sm transition-all hover:shadow-md', !member.is_active ? 'opacity-60' : '']"
         >
           <div class="flex items-start justify-between mb-6">
             <div class="flex items-center gap-5">
@@ -159,7 +159,7 @@ function closeModal() {
             </div>
           </div>
 
-          <div v-if="member.email || member.start_date" class="mt-6 bg-hover/60 rounded-xl px-8 py-6 space-y-3.5">
+          <div v-if="member.email || member.start_date" class="mt-5 bg-hover/60 rounded-xl px-5 py-4 space-y-3">
             <div v-if="member.email" class="flex items-center gap-3 text-xs text-text-secondary">
               <Mail :size="14" class="shrink-0 text-text-muted" />
               <span class="truncate">{{ member.email }}</span>

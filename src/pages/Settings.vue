@@ -123,7 +123,7 @@ function handleImport() {
 
     <div class="max-w-2xl space-y-10">
       <!-- Database Location -->
-      <div class="bg-card rounded-2xl p-10 shadow-sm">
+      <div class="bg-card rounded-2xl p-8 shadow-sm">
         <div class="flex items-start gap-6">
           <div class="w-12 h-12 rounded-xl bg-purple/10 flex items-center justify-center shrink-0">
             <HardDrive :size="22" class="text-purple" />
@@ -155,7 +155,7 @@ function handleImport() {
       </div>
 
       <!-- Export -->
-      <div class="bg-card rounded-2xl p-10 shadow-sm">
+      <div class="bg-card rounded-2xl p-8 shadow-sm">
         <div class="flex items-start gap-6">
           <div class="w-12 h-12 rounded-xl bg-blue/10 flex items-center justify-center shrink-0">
             <Download :size="22" class="text-blue" />
@@ -175,7 +175,7 @@ function handleImport() {
       </div>
 
       <!-- Import -->
-      <div class="bg-card rounded-2xl p-10 shadow-sm">
+      <div class="bg-card rounded-2xl p-8 shadow-sm">
         <div class="flex items-start gap-6">
           <div class="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
             <Upload :size="22" class="text-warning" />
@@ -200,7 +200,7 @@ function handleImport() {
       </div>
 
       <!-- About -->
-      <div class="bg-card rounded-2xl p-10 shadow-sm">
+      <div class="bg-card rounded-2xl p-8 shadow-sm">
         <h2 class="text-lg font-semibold text-text mb-3">About</h2>
         <div class="space-y-2 text-sm text-text-secondary leading-relaxed">
           <p><span class="font-medium text-text">Research Lab Manager</span> v0.1.0</p>
