@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Users, GraduationCap, FolderKanban, FileText } from 'lucide-vue-next'
+import { Users, GraduationCap, FolderKanban, FileText, BookOpen } from 'lucide-vue-next'
 import { useTeamStore } from '@/stores/teamStore'
 import { usePhdStore } from '@/stores/phdStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { useMeetingStore } from '@/stores/meetingStore'
 import StatusBadge from '@/components/StatusBadge.vue'
 import type { Component } from 'vue'
+import type { DissertationChapter, PhdTrackerWithMember } from '@/types'
 
 const teamStore = useTeamStore()
 const phdStore = usePhdStore()
@@ -42,6 +43,14 @@ function getProgress(startDate: string, endDate: string) {
   const elapsed = today.getTime() - start
   return Math.min(Math.max(Math.round((elapsed / (end - start)) * 100), 0), 100)
 }
+
+function getChapters(tracker: PhdTrackerWithMember): DissertationChapter[] {
+  try { return JSON.parse(tracker.chapters || '[]') } catch { return [] }
+}
+
+function getFinishedChapters(tracker: PhdTrackerWithMember) {
+  return getChapters(tracker).filter(c => c.status === 'finished').length
+}
 </script>
 
 <template>
@@ -72,30 +81,50 @@ function getProgress(startDate: string, endDate: string) {
     <div class="bg-card rounded-2xl p-10 shadow-sm">
       <h2 class="text-lg font-semibold text-text mb-6 text-center">PhD Progress</h2>
       <p v-if="phdStore.trackers.length === 0" class="text-text-secondary text-sm py-4 text-center">No PhD students tracked yet.</p>
-      <div v-else class="space-y-5">
+      <div v-else class="space-y-10">
         <div v-for="tracker in phdStore.trackers" :key="tracker.id" class="flex items-center gap-5">
           <div class="w-9 h-9 rounded-full bg-hover flex items-center justify-center text-xs font-medium text-text-secondary shrink-0 overflow-hidden">
             <img v-if="tracker.member_photo" :src="tracker.member_photo" class="w-full h-full object-cover" />
             <template v-else>{{ tracker.member_name.split(' ').map((n: string) => n[0]).join('') }}</template>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center justify-between mb-2">
               <p class="text-sm font-medium text-text truncate text-left">{{ tracker.member_name }}</p>
               <StatusBadge :status="tracker.status" />
             </div>
-            <div class="w-full bg-hover rounded-full h-2">
-              <div
-                :class="[
-                  'h-2 rounded-full',
-                  tracker.status === 'on_track' ? 'bg-success' :
-                  tracker.status === 'at_risk' ? 'bg-warning' :
-                  tracker.status === 'overdue' ? 'bg-danger' : 'bg-blue',
-                ]"
-                :style="{ width: `${getProgress(tracker.phd_start_date, tracker.expected_end_date)}%` }"
-              />
+            <!-- Time-based progress -->
+            <div class="flex items-center gap-3 mb-1.5">
+              <span class="text-[10px] text-text-muted w-12 shrink-0 text-left">Time</span>
+              <div class="flex-1 bg-hover rounded-full h-2">
+                <div
+                  :class="[
+                    'h-2 rounded-full',
+                    tracker.status === 'on_track' ? 'bg-success' :
+                    tracker.status === 'at_risk' ? 'bg-warning' :
+                    tracker.status === 'overdue' ? 'bg-danger' : 'bg-blue',
+                  ]"
+                  :style="{ width: `${getProgress(tracker.phd_start_date, tracker.expected_end_date)}%` }"
+                />
+              </div>
+              <span class="text-xs text-text-muted w-10 text-right shrink-0">{{ getProgress(tracker.phd_start_date, tracker.expected_end_date) }}%</span>
+            </div>
+            <!-- Chapter-based progress -->
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] text-text-muted w-12 shrink-0 text-left">Chapters</span>
+              <div class="flex-1 flex items-center gap-1.5 flex-wrap">
+                <template v-if="getChapters(tracker).length > 0">
+                  <BookOpen
+                    v-for="(ch, i) in getChapters(tracker)"
+                    :key="i"
+                    :size="22"
+                    :class="ch.status === 'finished' ? 'text-purple' : 'text-text-muted/30'"
+                  />
+                </template>
+                <span v-else class="text-[10px] text-text-muted">No chapters yet</span>
+              </div>
+              <span class="text-xs text-text-muted w-10 text-right shrink-0">{{ getFinishedChapters(tracker) }}/{{ getChapters(tracker).length }}</span>
             </div>
           </div>
-          <span class="text-xs text-text-muted w-10 text-right">{{ getProgress(tracker.phd_start_date, tracker.expected_end_date) }}%</span>
         </div>
       </div>
     </div>

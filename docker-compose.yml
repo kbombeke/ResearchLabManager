@@ -1,0 +1,19 @@
+# Build and run Research Lab Manager with a single command:
+#
+#   docker compose up -d --build
+#
+# Compose reads VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from the .env
+# file in this directory and passes them as build args (Vite bakes them
+# into the bundle). The app is then served at http://localhost:8080.
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_BIBLIO_BASE: ${VITE_BIBLIO_BASE:-/biblio-api}
+    ports:
+      - "8080:80"
+    restart: unless-stopped

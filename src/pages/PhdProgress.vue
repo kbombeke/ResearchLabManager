@@ -182,7 +182,7 @@ function barColor(status: string) {
           <div v-for="tracker in phdStore.trackers" :key="tracker.id" class="flex items-center gap-5">
             <div class="w-48 shrink-0 text-right">
               <p class="text-sm font-medium text-text truncate">{{ tracker.member_name }}</p>
-              <p class="text-xs text-text-muted mt-0.5">{{ differenceInMonths(new Date(tracker.expected_end_date), new Date(tracker.phd_start_date)) }} months</p>
+              <p class="text-xs text-text-muted mt-0.5">{{ differenceInMonths(new Date(tracker.expected_end_date), new Date(tracker.phd_start_date)) }} months · {{ getChapters(tracker).length }} {{ getChapters(tracker).length === 1 ? 'chapter' : 'chapters' }}</p>
             </div>
             <div class="flex-1 relative h-9">
               <div class="absolute h-8 rounded-lg bg-hover border border-border top-0.5" :style="trackerBarStyle(tracker)">

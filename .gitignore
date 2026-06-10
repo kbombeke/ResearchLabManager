@@ -4,15 +4,13 @@ node_modules/
 # Build output
 dist/
 
-# Tauri build output
-src-tauri/target/
-
 # OS files
 .DS_Store
 
 # Environment
 .env
 .env.*
+!.env.example
 
 # Local data dumps from the legacy SQLite migration (contains real lab data)
 legacy-backup.json

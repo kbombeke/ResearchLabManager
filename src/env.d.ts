@@ -9,6 +9,9 @@ declare module '*.vue' {
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string
   readonly VITE_SUPABASE_ANON_KEY: string
+  // Optional override for the UGent Biblio API base path/URL.
+  // Defaults to '/biblio-api' (proxied by nginx / Vite dev server).
+  readonly VITE_BIBLIO_BASE?: string
 }
 
 interface ImportMeta {

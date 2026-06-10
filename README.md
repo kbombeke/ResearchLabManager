@@ -2,7 +2,7 @@
 
 # Research Lab Manager
 
-A desktop application for research lab leaders to manage their team, track PhD student progress, organize research projects, and keep meeting notes — all in one place. Lab data lives in a shared Supabase (Postgres) project so everyone in the lab sees the same data and changes propagate live.
+A web application for research lab leaders to manage their team, track PhD student progress, organize research projects, and keep meeting notes — all in one place. Lab data lives in a shared Supabase (Postgres) project so everyone in the lab sees the same data and changes propagate live.
 
 ## Features
 
@@ -44,6 +44,8 @@ The editor supports rich text formatting: bold, italic, strikethrough, headings,
 
 Pull each team member's publication record straight from [Biblio UGent](https://biblio.ugent.be/). Set a member's UGent ID on the Team page — either the **numeric form** (e.g., `801000947425`) or the **UUID form** found on newer Biblio profiles (e.g., `EB23467E-5E7C-11E6-BCAC-C275B5D1D7B1`) — and the Publications page will fetch their full bibliography on demand.
 
+> **Note (web hosting):** Biblio UGent does not send CORS headers, so the browser cannot call it directly. The app requests publications via the relative path `/biblio-api/...`, which must be reverse-proxied to `https://biblio.ugent.be/` by your web server. The Vite dev server does this automatically; for production see [Deploying to a web server](#deploying-to-a-web-server).
+
 Each member's publications are listed with title, authors, year, type, journal, and a link out to the Biblio record or DOI. The page also surfaces aggregate metadata across all tracked members:
 
 - **% A1 tile** — share of publications classified as A1 (journal article in Web of Science) under the Belgian VABB classification.
@@ -61,17 +63,13 @@ Filters let you narrow the per-member list by year or type.
 
 ## Getting Started
 
-Research Lab Manager is a desktop application built with [Tauri](https://tauri.app/), Vue 3, and [Supabase](https://supabase.com/) (hosted Postgres + auth + realtime).
+Research Lab Manager is a web application built with Vue 3 + [Vite](https://vite.dev/) and [Supabase](https://supabase.com/) (hosted Postgres + auth + realtime). The build output is a set of static files you can serve from any web server.
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or later)
-- [Rust](https://www.rust-lang.org/tools/install) (stable toolchain)
+- [Node.js](https://nodejs.org/) (v20 or later) — needed to build the static bundle
 - A free [Supabase](https://supabase.com/) project (one per lab — everyone shares it)
-- Platform build tools required by Tauri:
-  - **macOS** — Xcode Command Line Tools (`xcode-select --install`)
-  - **Windows** — Microsoft Visual Studio C++ Build Tools and WebView2
-  - **Linux** — `webkit2gtk`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, and friends (see the [Tauri prerequisites guide](https://tauri.app/start/prerequisites/))
+- A web server to host the built files (e.g., nginx or Apache) with the ability to reverse-proxy the Biblio API path
 
 ### One-time Supabase setup (do this once per lab)
 
@@ -98,33 +96,87 @@ npm install
 
 ### Run in development
 
-Launches the Vite dev server and opens the Tauri window with hot reload:
+Launches the Vite dev server with hot reload at `http://localhost:5173`. The dev server also proxies `/biblio-api` to Biblio UGent, so the Publications page works locally without extra setup:
 
 ```bash
-npm run tauri dev
+npm run dev
 ```
 
-### Build a standalone application
+### Build for production
 
-To build a production binary and platform installer:
+Type-checks and builds the static bundle into `dist/`:
 
 ```bash
-npm run tauri build
+npm run build
 ```
 
-This compiles the Vue app, bundles the Rust binary, and produces installers in `src-tauri/target/release/bundle/`:
+The `dist/` folder contains plain static files (`index.html`, JS, CSS, assets) — deploy it as-is to any web server or static host.
 
-- **macOS** — `.app` and `.dmg` under `bundle/macos/` and `bundle/dmg/`
-- **Windows** — `.msi` and `.exe` installers under `bundle/msi/` and `bundle/nsis/`
-- **Linux** — `.deb`, `.rpm`, and `.AppImage` under their respective folders
+### Deploying to a web server
 
-The first build downloads and compiles all Rust dependencies and may take several minutes. Subsequent builds are much faster.
+1. Build the bundle: `npm run build`.
+2. Copy the contents of `dist/` to your web root (e.g., `/var/www/researchlabmanager`).
+3. Configure your web server to reverse-proxy `/biblio-api/` to `https://biblio.ugent.be/` (so the Publications page can reach Biblio UGent without CORS issues).
+
+A ready-to-use nginx example lives in [`deploy/nginx.conf`](deploy/nginx.conf). The essential parts:
+
+```nginx
+server {
+    listen 80;
+    server_name your-lab.example.com;
+    root /var/www/researchlabmanager;
+    index index.html;
+
+    # Reverse-proxy the UGent Biblio API to avoid browser CORS.
+    location /biblio-api/ {
+        proxy_pass https://biblio.ugent.be/;
+        proxy_set_header Host biblio.ugent.be;
+        proxy_ssl_server_name on;
+    }
+
+    # The app uses hash-based routing, so a simple static root is enough.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+The app uses hash-based routing (`/#/team`, `/#/publications`, …), so no SPA history rewrite is required — every route is served by the same `index.html`.
+
+> **Env vars are baked in at build time.** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (and the optional `VITE_BIBLIO_BASE`) must be present in `.env` when you run `npm run build`, not on the server. These values are not secrets (the anon key is meant to be public, protected by Supabase Row Level Security).
+
+### Deploying with Docker (easiest)
+
+The repo ships a multi-stage `Dockerfile` (build with Node → serve with nginx) and a `docker-compose.yml`. nginx and the Biblio reverse proxy are baked into the image, so this is the simplest way to host the app.
+
+1. Create a `.env` file with your Supabase values (see [`.env.example`](.env.example)).
+2. Build and start:
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. Open `http://localhost:8080` (change the published port in `docker-compose.yml` if needed).
+
+Compose reads the `VITE_*` values from `.env` and passes them as build args — Vite bakes them into the bundle, so rebuild (`--build`) after changing them.
+
+To build the image without compose:
+
+```bash
+docker build \
+  --build-arg VITE_SUPABASE_URL=https://your-project-ref.supabase.co \
+  --build-arg VITE_SUPABASE_ANON_KEY=your-anon-public-key \
+  -t researchlabmanager .
+docker run -d -p 8080:80 researchlabmanager
+```
+
+For public/HTTPS hosting, run this container behind a TLS-terminating reverse proxy (Caddy, Traefik, or another nginx) pointing at the container's port 80.
 
 ### Other scripts
 
 ```bash
-npm run dev       # Vite dev server only (no Tauri shell)
-npm run build     # Type-check and build the frontend bundle only
+npm run dev       # Vite dev server (with Biblio proxy) + hot reload
+npm run build     # Type-check and build the static bundle into dist/
 npm run lint      # Run ESLint
-npm run preview   # Preview the built frontend
+npm run preview   # Locally preview the built dist/ bundle
 ```
